@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { InputField } from "./components/InputField";
 import type { LoanDetails, AmortizationEntry } from "./types";
-import "./App.css";
 import { ResultCard } from "./components/ResultCard";
 import { AmortizationTable } from "./components/AmortizationTable";
 
 // Style constants
 const inputClasses =
-  "w-full h-14 text-lg px-4 py-3 bg-gray-700 border-2 border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500";
+  "w-full h-12 text-base px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
 
 const buttonClasses =
-  "w-full bg-blue-600 text-white text-lg font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors duration-200";
+  "w-full bg-blue-600 text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-900 transition-colors duration-200";
+
+const removeButtonClasses =
+  "px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-1 focus:ring-offset-gray-900 transition-colors duration-200";
 
 // Helper function to format currency
 const formatCurrency = (value: number): string => {
@@ -237,17 +239,17 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-5xl font-bold text-center text-white mb-12">
+    <div className="min-h-screen py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-4xl font-bold text-center text-white mb-8">
           Loan Prepayment Calculator
         </h1>
 
-        <div className="bg-gray-800 rounded-xl p-8 mb-8 shadow-lg border border-gray-700">
-          <h2 className="text-2xl font-semibold text-white text-center mb-8 pb-4 border-b border-gray-700">
+        <div className="bg-gray-800 rounded-lg p-6 mb-6 shadow-lg border border-gray-700">
+          <h2 className="text-xl font-semibold text-white text-center mb-6 pb-3 border-b border-gray-700">
             Loan Details
           </h2>
-          <div className="max-w-xl mx-auto space-y-4">
+          <div className="max-w-xl mx-auto space-y-3">
             <InputField
               id="principal"
               label="Principal Amount"
@@ -314,17 +316,17 @@ function App() {
           </div>
         </div>
 
-        <div className="bg-gray-800 shadow-xl rounded-lg p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-white mb-8 text-center">
+        <div className="bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-white mb-6 text-center">
             Prepayment Details
           </h2>
-          <div className="grid grid-cols-1 gap-y-6">
+          <div className="grid grid-cols-1 gap-y-4">
             {prepayments.map((prepayment) => (
               <div
                 key={prepayment.id}
-                className="flex flex-col md:flex-row md:items-center"
+                className="flex flex-col md:flex-row md:items-center gap-3"
               >
-                <div className="w-full md:w-3/5 flex gap-4">
+                <div className="w-full md:w-3/5 flex gap-3">
                   <div className="flex-1">
                     <input
                       type="number"
@@ -362,7 +364,8 @@ function App() {
                   </div>
                   <button
                     onClick={() => handleRemovePrepayment(prepayment.id)}
-                    className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors duration-200"
+                    className={removeButtonClasses}
+                    aria-label="Remove prepayment"
                   >
                     Remove
                   </button>
@@ -371,7 +374,7 @@ function App() {
             ))}
             <button
               onClick={handleAddPrepayment}
-              className="w-full bg-green-600 text-white text-lg font-semibold py-4 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors duration-200"
+              className="w-full bg-green-600/10 text-green-400 text-base font-medium py-3 px-4 rounded-lg hover:bg-green-600/20 focus:outline-none focus:ring-1 focus:ring-green-500 focus:ring-offset-1 focus:ring-offset-gray-900 transition-colors duration-200"
             >
               Add Prepayment
             </button>
@@ -383,11 +386,11 @@ function App() {
         </button>
 
         {results.length > 0 && (
-          <div className="mt-8 bg-gray-800 shadow-xl rounded-lg p-8">
-            <h2 className="text-2xl font-semibold text-white mb-8 text-center">
+          <div className="mt-6 bg-gray-800 shadow-lg rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-white mb-6 text-center">
               Results
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <ResultCard
                 title="Total Savings"
                 value={formatCurrency(totalSavings)}
@@ -413,29 +416,29 @@ function App() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-white mb-6 pb-2 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-gray-700">
                 Prepayment Impact Details
               </h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-700">
                   <thead>
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Prepayment
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Date
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Savings
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         New EMI
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         New Tenure
                       </th>
                     </tr>
@@ -444,24 +447,24 @@ function App() {
                     {results.map((result) => (
                       <tr
                         key={result.prepaymentId}
-                        className="hover:bg-gray-700"
+                        className="hover:bg-gray-700/50"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
                           {formatCurrency(result.amount)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
                           {new Date(result.date).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
                           {formatCurrency(result.amount)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-green-400">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-green-400">
                           {formatCurrency(result.savings)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-400">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-400">
                           {formatCurrency(result.newEMI)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
                           {result.newTenureMonths} months
                         </td>
                       </tr>
@@ -470,10 +473,10 @@ function App() {
                 </table>
               </div>
 
-              <h3 className="text-xl font-semibold text-white mb-6 pb-2 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white mb-4 pb-2 border-b border-gray-700">
                 Amortization Schedule
               </h3>
-              <div className="overflow-x-auto bg-gray-900 rounded-xl p-4 shadow-inner">
+              <div className="overflow-x-auto bg-gray-900 rounded-lg p-3 shadow-inner">
                 <AmortizationTable
                   data={calculateAmortization(
                     loanDetails.principal,

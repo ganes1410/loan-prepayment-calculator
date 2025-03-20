@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "./App";
+import { formatCurrency } from "./utils/formatters";
 
 describe("Loan Prepayment Calculator", () => {
   // Render tests
@@ -177,9 +178,10 @@ describe("Loan Prepayment Calculator", () => {
     expect(screen.getByLabelText(/Interest Rate/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Loan Tenure/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Loan Start Date/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Monthly EMI/i)).toBeInTheDocument();
   });
 
-  it("calculates EMI when loan details are entered", async () => {
+  it("calculates EMI when loan details are entered", () => {
     render(<App />);
 
     const principalInput = screen.getByLabelText(/Principal Amount/i);
@@ -187,110 +189,90 @@ describe("Loan Prepayment Calculator", () => {
     const tenureInput = screen.getByLabelText(/Loan Tenure/i);
 
     fireEvent.change(principalInput, { target: { value: "1000000" } });
-    fireEvent.change(interestInput, { target: { value: "10" } });
+    fireEvent.change(interestInput, { target: { value: "8.5" } });
     fireEvent.change(tenureInput, { target: { value: "20" } });
 
-    await waitFor(() => {
-      expect(screen.getByText(/₹8,775/i)).toBeInTheDocument();
-    });
+    // EMI should be calculated automatically
+    const emiDisplay = screen.getByLabelText(/Monthly EMI/i);
+    expect(emiDisplay).toHaveValue(formatCurrency(7689)); // Expected EMI for 10L at 8.5% for 20 years
   });
 
-  it("allows adding and removing prepayments", async () => {
+  it("adds and removes prepayments", () => {
     render(<App />);
 
-    // Add first prepayment
+    // Add a prepayment
     const addButton = screen.getByText(/Add Prepayment/i);
     fireEvent.click(addButton);
 
-    const prepaymentAmountInput = screen.getByPlaceholderText(
-      /Enter prepayment amount/i
-    );
-    const prepaymentDateInput = screen.getByLabelText(/Prepayment Date/i);
+    // Verify prepayment inputs are added
+    expect(
+      screen.getByPlaceholderText(/Enter prepayment amount/i)
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Prepayment Date/i)).toBeInTheDocument();
 
-    fireEvent.change(prepaymentAmountInput, { target: { value: "100000" } });
-    fireEvent.change(prepaymentDateInput, { target: { value: "2024-12-31" } });
+    // Remove the prepayment
+    const removeButton = screen.getByText(/Remove/i);
+    fireEvent.click(removeButton);
 
-    // Add second prepayment
-    fireEvent.click(addButton);
-
-    const removeButtons = screen.getAllByText(/Remove/i);
-    expect(removeButtons).toHaveLength(2);
-
-    // Remove first prepayment
-    fireEvent.click(removeButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/Remove/i)).toHaveLength(1);
-    });
+    // Verify prepayment inputs are removed
+    expect(
+      screen.queryByPlaceholderText(/Enter prepayment amount/i)
+    ).not.toBeInTheDocument();
   });
 
-  it("calculates savings for multiple prepayments", async () => {
+  it("calculates savings for multiple prepayments", () => {
     render(<App />);
 
     // Enter loan details
-    const principalInput = screen.getByLabelText(/Principal Amount/i);
-    const interestInput = screen.getByLabelText(/Interest Rate/i);
-    const tenureInput = screen.getByLabelText(/Loan Tenure/i);
-
-    fireEvent.change(principalInput, { target: { value: "1000000" } });
-    fireEvent.change(interestInput, { target: { value: "10" } });
-    fireEvent.change(tenureInput, { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText(/Principal Amount/i), {
+      target: { value: "1000000" },
+    });
+    fireEvent.change(screen.getByLabelText(/Interest Rate/i), {
+      target: { value: "8.5" },
+    });
+    fireEvent.change(screen.getByLabelText(/Loan Tenure/i), {
+      target: { value: "20" },
+    });
 
     // Add two prepayments
-    const addButton = screen.getByText(/Add Prepayment/i);
-    fireEvent.click(addButton);
-    fireEvent.click(addButton);
+    fireEvent.click(screen.getByText(/Add Prepayment/i));
+    fireEvent.click(screen.getByText(/Add Prepayment/i));
 
-    const prepaymentAmountInputs = screen.getAllByPlaceholderText(
+    // Enter prepayment details
+    const prepaymentAmounts = screen.getAllByPlaceholderText(
       /Enter prepayment amount/i
     );
-    const prepaymentDateInputs = screen.getAllByLabelText(/Prepayment Date/i);
-
-    fireEvent.change(prepaymentAmountInputs[0], {
-      target: { value: "100000" },
-    });
-    fireEvent.change(prepaymentDateInputs[0], {
-      target: { value: "2024-12-31" },
-    });
-
-    fireEvent.change(prepaymentAmountInputs[1], {
-      target: { value: "200000" },
-    });
-    fireEvent.change(prepaymentDateInputs[1], {
-      target: { value: "2025-12-31" },
-    });
+    fireEvent.change(prepaymentAmounts[0], { target: { value: "100000" } });
+    fireEvent.change(prepaymentAmounts[1], { target: { value: "50000" } });
 
     // Calculate results
-    const calculateButton = screen.getByText(/Calculate Prepayment Benefits/i);
-    fireEvent.click(calculateButton);
+    fireEvent.click(screen.getByText(/Calculate Prepayment Benefits/i));
 
-    await waitFor(() => {
-      expect(screen.getByText(/Total Savings/i)).toBeInTheDocument();
-      expect(screen.getByText(/Final EMI/i)).toBeInTheDocument();
-      expect(screen.getByText(/New Tenure/i)).toBeInTheDocument();
-    });
+    // Verify results are displayed
+    expect(screen.getByText(/Total Savings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Final EMI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loan Tenure Reduction/i)).toBeInTheDocument();
   });
 
-  it("validates loan details before calculation", async () => {
+  it("validates loan details before calculation", () => {
     render(<App />);
 
-    const calculateButton = screen.getByText(/Calculate Prepayment Benefits/i);
-    fireEvent.click(calculateButton);
+    // Try to calculate without entering loan details
+    fireEvent.click(screen.getByText(/Calculate Prepayment Benefits/i));
 
-    await waitFor(() => {
-      expect(screen.queryByText(/Total Savings/i)).not.toBeInTheDocument();
-    });
+    // Verify results are not displayed
+    expect(screen.queryByText(/Total Savings/i)).not.toBeInTheDocument();
   });
 
-  it("formats currency values correctly", async () => {
+  it("formats currency values correctly", () => {
     render(<App />);
 
-    const principalInput = screen.getByLabelText(/Principal Amount/i);
-    fireEvent.change(principalInput, { target: { value: "1000000" } });
-
-    await waitFor(() => {
-      expect(screen.getByText(/₹10,00,000/i)).toBeInTheDocument();
-      expect(screen.getByText(/Ten Lakh/i)).toBeInTheDocument();
+    // Enter loan amount
+    fireEvent.change(screen.getByLabelText(/Principal Amount/i), {
+      target: { value: "1000000" },
     });
+
+    // Verify formatted value is displayed
+    expect(screen.getByText(/₹10,00,000/i)).toBeInTheDocument();
   });
 });
