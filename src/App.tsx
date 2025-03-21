@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
 import { InputField } from "./components/InputField";
-import type { LoanDetails, AmortizationEntry } from "./types";
+import type {
+  LoanDetails,
+  AmortizationEntry,
+  Prepayment,
+  PrepaymentResult,
+} from "./types";
 import { ResultCard } from "./components/ResultCard";
 import { AmortizationTable } from "./components/AmortizationTable";
+import { formatCurrency, numberToWords } from "./utils/formatters";
 
 // Style constants
 const inputClasses =
@@ -14,39 +20,21 @@ const buttonClasses =
 const removeButtonClasses =
   "px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 focus:outline-none focus:ring-1 focus:ring-red-500 focus:ring-offset-1 focus:ring-offset-gray-900 transition-colors duration-200";
 
-// Helper function to format currency
-const formatCurrency = (value: number): string => {
-  if (value === 0) return "";
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-};
-
-// Helper function to convert number to words
-const numberToWords = (num: number): string => {
-  if (num === 0) return "";
-  if (num < 1000) return `${num}`;
-  if (num < 100000) return `${(num / 1000).toFixed(1)} thousand`;
-  if (num < 10000000) return `${(num / 100000).toFixed(1)} lakh`;
-  return `${(num / 10000000).toFixed(1)} crore`;
-};
-
-interface Prepayment {
-  id: string;
-  amount: number;
-  date: string;
-}
-
-interface PrepaymentResult {
-  prepaymentId: string;
-  amount: number;
-  date: string;
-  savings: number;
-  newEMI: number;
-  newTenureMonths: number;
-}
+const readOnlyDisplayClasses = `
+  w-full
+  h-14
+  px-4
+  py-4
+  bg-gray-700
+  text-white
+  text-base
+  font-semibold
+  border
+  border-gray-600
+  rounded-lg
+  flex
+  items-center
+`;
 
 function App() {
   const [loanDetails, setLoanDetails] = useState<LoanDetails>({
@@ -125,6 +113,23 @@ function App() {
     return Math.round(emi);
   };
 
+  const calculateTenureMonths = (
+    principal: number,
+    emi: number,
+    annualRate: number
+  ): number => {
+    const monthlyRate = annualRate / 100 / 12;
+    // If EMI is less than monthly interest, loan cannot be repaid
+    const monthlyInterest = principal * monthlyRate;
+    if (emi <= monthlyInterest) {
+      return Infinity;
+    }
+    const tenureMonths =
+      Math.log(emi / (emi - principal * monthlyRate)) /
+      Math.log(1 + monthlyRate);
+    return Math.ceil(tenureMonths);
+  };
+
   const handleCalculate = () => {
     if (!isValidLoanDetails()) return;
 
@@ -147,19 +152,44 @@ function App() {
         (prepaymentDate.getMonth() - startDate.getMonth());
 
       if (monthsElapsed >= 0 && monthsElapsed < currentTenureMonths) {
-        currentPrincipal -= prepayment.amount;
+        // Calculate remaining principal at prepayment date
+        const monthlyRate = loanDetails.interestRate / 100 / 12;
+        let remainingPrincipal = currentPrincipal;
+
+        // Calculate remaining principal after monthly payments
+        for (let i = 0; i < monthsElapsed; i++) {
+          const interest = remainingPrincipal * monthlyRate;
+          const principalPaid = currentEMI - interest;
+          remainingPrincipal -= principalPaid;
+        }
+
+        // Apply prepayment
+        remainingPrincipal = Math.max(
+          0,
+          remainingPrincipal - prepayment.amount
+        );
+
+        // Calculate new EMI and tenure
+        const remainingMonths = currentTenureMonths - monthsElapsed;
         const newEMI = calculateEMI(
-          currentPrincipal,
+          remainingPrincipal,
           loanDetails.interestRate,
-          currentTenureMonths - monthsElapsed
+          remainingMonths
         );
         const newTenureMonths = calculateTenureMonths(
-          currentPrincipal,
+          remainingPrincipal,
           newEMI,
           loanDetails.interestRate
         );
-        const savings =
-          currentEMI * currentTenureMonths - newEMI * newTenureMonths;
+
+        // Calculate total payments and savings
+        const oldTotalPayment = currentEMI * currentTenureMonths;
+        const newTotalPayment =
+          currentEMI * monthsElapsed + // Payments made so far
+          newEMI * newTenureMonths + // Future payments
+          prepayment.amount; // Prepayment amount
+
+        const savings = oldTotalPayment - newTotalPayment;
 
         results.push({
           prepaymentId: prepayment.id,
@@ -167,11 +197,12 @@ function App() {
           date: prepayment.date,
           savings,
           newEMI,
-          newTenureMonths,
+          newTenureMonths: newTenureMonths + monthsElapsed,
         });
 
+        currentPrincipal = remainingPrincipal;
         currentEMI = newEMI;
-        currentTenureMonths = newTenureMonths;
+        currentTenureMonths = newTenureMonths + monthsElapsed;
         totalSavings += savings;
       }
     });
@@ -186,18 +217,6 @@ function App() {
       loanDetails.interestRate > 0 &&
       loanDetails.tenureYears > 0
     );
-  };
-
-  const calculateTenureMonths = (
-    principal: number,
-    emi: number,
-    annualRate: number
-  ): number => {
-    const monthlyRate = annualRate / 100 / 12;
-    const tenureMonths =
-      Math.log(emi / (emi - principal * monthlyRate)) /
-      Math.log(1 + monthlyRate);
-    return Math.round(tenureMonths);
   };
 
   const calculateAmortization = (
@@ -296,23 +315,33 @@ function App() {
               onChange={handleLoanDetailsChange}
             />
 
-            <InputField
-              id="calculatedEMI"
-              label="Monthly EMI (Calculated)"
-              type="text"
-              value={
-                monthlyEMI > 0
-                  ? formatCurrency(monthlyEMI)
-                  : "Enter loan details"
-              }
-              onChange={() => {}}
-              formattedValue={
-                monthlyEMI > 0 ? formatCurrency(monthlyEMI) : undefined
-              }
-              wordValue={monthlyEMI > 0 ? numberToWords(monthlyEMI) : undefined}
-              readOnly={true}
-              isCalculated={true}
-            />
+            <div className="mb-6">
+              <label
+                className="block text-gray-300 text-sm font-medium mb-2"
+                id="calculatedEMILabel"
+              >
+                Monthly EMI (Calculated)
+              </label>
+              <div className="relative">
+                <div
+                  aria-labelledby="calculatedEMILabel"
+                  aria-readonly="true"
+                  className={readOnlyDisplayClasses}
+                  role="textbox"
+                  data-testid="emi-display"
+                >
+                  {monthlyEMI ? formatCurrency(monthlyEMI) : ""}
+                </div>
+                <div className="mt-2 text-sm text-gray-400">
+                  <span className="font-medium">
+                    {monthlyEMI ? numberToWords(monthlyEMI) : ""}
+                  </span>
+                  <span className="ml-1 text-gray-500">
+                    ({monthlyEMI ? "per month" : ""})
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -324,44 +353,58 @@ function App() {
             {prepayments.map((prepayment) => (
               <div
                 key={prepayment.id}
-                className="flex flex-col md:flex-row md:items-center gap-3"
+                className="flex flex-col md:flex-row gap-3"
               >
-                <div className="w-full md:w-3/5 flex gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      value={prepayment.amount || ""}
-                      onChange={(e) =>
-                        handlePrepaymentChange(
-                          prepayment.id,
-                          "amount",
-                          Number(e.target.value)
-                        )
-                      }
-                      placeholder="Enter prepayment amount"
-                      className={inputClasses}
-                    />
-                    {prepayment.amount > 0 && (
-                      <div className="mt-1 text-sm text-gray-400">
-                        {formatCurrency(prepayment.amount)} (
-                        {numberToWords(prepayment.amount)})
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="date"
-                      value={prepayment.date}
-                      onChange={(e) =>
-                        handlePrepaymentChange(
-                          prepayment.id,
-                          "date",
-                          e.target.value
-                        )
-                      }
-                      className={inputClasses}
-                    />
-                  </div>
+                <div className="flex-1">
+                  <label
+                    htmlFor={`prepayment-amount-${prepayment.id}`}
+                    className="block text-gray-300 text-sm font-medium mb-2"
+                  >
+                    Prepayment Amount
+                  </label>
+                  <input
+                    id={`prepayment-amount-${prepayment.id}`}
+                    type="number"
+                    value={prepayment.amount || ""}
+                    onChange={(e) =>
+                      handlePrepaymentChange(
+                        prepayment.id,
+                        "amount",
+                        Number(e.target.value)
+                      )
+                    }
+                    placeholder="Enter prepayment amount"
+                    className={inputClasses}
+                  />
+                  {prepayment.amount > 0 && (
+                    <div className="mt-1 text-sm text-gray-400">
+                      {formatCurrency(prepayment.amount)} (
+                      {numberToWords(prepayment.amount)})
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label
+                    htmlFor={`prepayment-date-${prepayment.id}`}
+                    className="block text-gray-300 text-sm font-medium mb-2"
+                  >
+                    Prepayment Date
+                  </label>
+                  <input
+                    id={`prepayment-date-${prepayment.id}`}
+                    type="date"
+                    value={prepayment.date}
+                    onChange={(e) =>
+                      handlePrepaymentChange(
+                        prepayment.id,
+                        "date",
+                        e.target.value
+                      )
+                    }
+                    className={inputClasses}
+                  />
+                </div>
+                <div className="flex items-end">
                   <button
                     onClick={() => handleRemovePrepayment(prepayment.id)}
                     className={removeButtonClasses}
@@ -390,28 +433,26 @@ function App() {
             <h2 className="text-xl font-semibold text-white mb-6 text-center">
               Results
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <ResultCard
                 title="Total Savings"
                 value={formatCurrency(totalSavings)}
                 valueColor="text-green-400"
+                data-testid="total-savings"
               />
               <ResultCard
                 title="Final EMI"
                 value={formatCurrency(results[results.length - 1].newEMI)}
                 valueColor="text-blue-400"
+                data-testid="final-emi"
               />
               <ResultCard
                 title="Loan Tenure Reduction"
-                value={`${Math.floor(
-                  (loanDetails.tenureYears * 12 -
-                    results[results.length - 1].newTenureMonths) /
-                    12
-                )} years, ${
-                  (loanDetails.tenureYears * 12 -
-                    results[results.length - 1].newTenureMonths) %
-                  12
-                } months`}
+                value={`${Math.round(
+                  loanDetails.tenureYears * 12 -
+                    results[results.length - 1].newTenureMonths
+                )} months`}
+                data-testid="tenure-reduction"
               />
             </div>
 

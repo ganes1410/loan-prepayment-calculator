@@ -1,16 +1,16 @@
-export interface LoanDetails {
+interface LoanDetails {
   principal: number;
   interestRate: number;
   tenureYears: number;
   startDate: string;
 }
 
-export interface PrepaymentDetails {
+interface PrepaymentDetails {
   amount: number;
   date: string;
 }
 
-export interface AmortizationEntry {
+interface AmortizationEntry {
   month: number;
   date: string;
   payment: number;
@@ -20,7 +20,7 @@ export interface AmortizationEntry {
   totalInterest: number;
 }
 
-export interface CalculationResult {
+interface CalculationResult {
   monthlyEMI: number;
   totalPayments: number;
   totalInterest: number;
@@ -29,3 +29,27 @@ export interface CalculationResult {
   interestSaved: number;
   tenureReduction: number;
 }
+
+interface Prepayment {
+  id: string;
+  amount: number;
+  date: string;
+}
+
+interface PrepaymentResult {
+  prepaymentId: string;
+  amount: number;
+  date: string;
+  savings: number;
+  newEMI: number;
+  newTenureMonths: number;
+}
+
+export type {
+  LoanDetails,
+  PrepaymentDetails,
+  AmortizationEntry,
+  CalculationResult,
+  Prepayment,
+  PrepaymentResult,
+};
