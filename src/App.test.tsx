@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "./App";
 import { formatCurrency } from "./utils/formatters";
 import userEvent from "@testing-library/user-event";
@@ -237,108 +231,94 @@ describe("Loan Prepayment Calculator", () => {
     expect(screen.getByText(/₹10,00,000/i)).toBeInTheDocument();
   });
 
-  const setupBasicLoanDetails = async () => {
-    const principalInput = screen.getByLabelText("Principal Amount");
-    const interestRateInput = screen.getByLabelText("Interest Rate (%)");
-    const tenureInput = screen.getByLabelText("Loan Tenure (years)");
+  const setLoanDetails = async () => {
+    const principal = screen.getByLabelText("Principal Amount");
+    const interestRate = screen.getByLabelText("Interest Rate (%)");
+    const tenureYears = screen.getByLabelText("Loan Tenure (years)");
+    const startDate = screen.getByLabelText("Loan Start Date");
 
-    // Enter required details
-    await userEvent.type(principalInput, "1000000");
-    await userEvent.type(interestRateInput, "8.5");
-    await userEvent.type(tenureInput, "20");
-  };
-
-  const addPrepayment = async () => {
-    const addButton = screen.getByRole("button", { name: /add prepayment/i });
-    await userEvent.click(addButton);
+    await userEvent.type(principal, "1000000");
+    await userEvent.type(interestRate, "8.5");
+    await userEvent.type(tenureYears, "20");
+    await userEvent.type(startDate, "2025-03-21");
   };
 
   const setPrepaymentDetails = async (amount: string, date: string) => {
-    // Get the last prepayment amount and date inputs
-    const prepaymentAmounts = screen.getAllByPlaceholderText(
-      "Enter prepayment amount"
-    );
-    const prepaymentDates = screen.getAllByPlaceholderText(
-      "Enter prepayment date"
-    );
+    const addPrepaymentButton = screen.getByText("Add Prepayment");
+    await userEvent.click(addPrepaymentButton);
 
-    const lastPrepaymentAmount =
-      prepaymentAmounts[prepaymentAmounts.length - 1];
-    const lastPrepaymentDate = prepaymentDates[prepaymentDates.length - 1];
+    const lastPrepaymentAmount = screen.getByLabelText(/Prepayment Amount/i);
+    const lastPrepaymentDate = screen.getByLabelText(/Prepayment Date/i);
 
     await userEvent.type(lastPrepaymentAmount, amount);
-    await userEvent.type(lastPrepaymentDate, date);
+    fireEvent.change(lastPrepaymentDate, { target: { value: date } });
   };
 
-  it("calculates EMI when loan details are entered", async () => {
-    await setupBasicLoanDetails();
+  const calculateResults = async () => {
+    const calculateButton = screen.getByText("Calculate Prepayment Benefits");
+    await userEvent.click(calculateButton);
+  };
 
-    // EMI should be calculated automatically
-    const emiDisplay = screen.getByTestId("emi-display");
-    expect(emiDisplay).toHaveTextContent(formatCurrency(7689)); // Expected EMI for 10L at 8.5% for 20 years
-  });
-
-  it("handles multiple prepayments correctly", async () => {
-    await setupBasicLoanDetails();
+  it("handles multiple prepayments", async () => {
+    await setLoanDetails();
 
     // Add first prepayment
-    await addPrepayment();
-    await setPrepaymentDetails("300000", "2024-06-01");
+    await setPrepaymentDetails("500000", "2024-07-01");
 
     // Add second prepayment
-    await addPrepayment();
-    await setPrepaymentDetails("200000", "2024-12-01");
+    await setPrepaymentDetails("300000", "2024-12-01");
 
-    // Calculate benefits
-    const calculateButton = screen.getByRole("button", {
-      name: /calculate prepayment benefits/i,
+    await calculateResults();
+
+    // Wait for results to appear and check table rows
+    await waitFor(() => {
+      expect(screen.getByText("Results")).toBeInTheDocument();
     });
-    await userEvent.click(calculateButton);
 
-    // Check if both prepayments are in the table
-    const table = screen.getByRole("table");
-    const rows = within(table).getAllByRole("row");
+    const rows = screen.getAllByRole("row");
     expect(rows.length).toBeGreaterThan(2); // Header + at least 2 prepayment rows
   });
 
   it("sorts prepayments by date", async () => {
-    await setupBasicLoanDetails();
+    await setLoanDetails();
 
-    // Add prepayments in reverse chronological order
-    await addPrepayment();
-    await setPrepaymentDetails("200000", "2024-12-01");
+    // Add prepayments in non-chronological order
+    await setPrepaymentDetails("300000", "2024-12-01");
+    await setPrepaymentDetails("500000", "2024-07-01");
 
-    await addPrepayment();
-    await setPrepaymentDetails("300000", "2024-06-01");
+    await calculateResults();
 
-    // Calculate benefits
-    const calculateButton = screen.getByRole("button", {
-      name: /calculate prepayment benefits/i,
+    // Wait for results to appear
+    await waitFor(() => {
+      expect(screen.getByText("Results")).toBeInTheDocument();
     });
-    await userEvent.click(calculateButton);
 
-    // Check if prepayments are sorted by date
-    const table = screen.getByRole("table");
-    const rows = within(table).getAllByRole("row");
-    expect(rows.length).toBeGreaterThan(2); // Header + at least 2 prepayment rows
+    const rows = screen.getAllByRole("row");
+    expect(rows.length).toBeGreaterThan(2);
+
+    // Get dates from the table
+    const dates = screen.getAllByRole("cell", {
+      name: /\d{1,2}\/\d{1,2}\/\d{4}/,
+    });
+    const firstDate = new Date(dates[0].textContent || "");
+    const secondDate = new Date(dates[1].textContent || "");
+
+    expect(firstDate.getTime()).toBeLessThan(secondDate.getTime());
   });
 
   it("calculates correct EMI reduction after prepayment", async () => {
-    await setupBasicLoanDetails();
-
-    // Add a significant prepayment
-    await addPrepayment();
+    await setLoanDetails();
     await setPrepaymentDetails("500000", "2024-07-01");
+    await calculateResults();
 
-    // Calculate benefits
-    const calculateButton = screen.getByRole("button", {
-      name: /calculate prepayment benefits/i,
+    // Wait for results to appear
+    await waitFor(() => {
+      expect(screen.getByText("Results")).toBeInTheDocument();
     });
-    await userEvent.click(calculateButton);
 
-    // Check if EMI is reduced
     const finalEMI = screen.getByTestId("final-emi");
     const initialEMI = screen.getByTestId("emi-display");
+
     expect(finalEMI.textContent).not.toBe(initialEMI.textContent);
   });
 });

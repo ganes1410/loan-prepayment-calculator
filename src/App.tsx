@@ -438,13 +438,13 @@ function App() {
                 title="Total Savings"
                 value={formatCurrency(totalSavings)}
                 valueColor="text-green-400"
-                data-testid="total-savings"
+                dataTestId="total-savings"
               />
               <ResultCard
                 title="Final EMI"
                 value={formatCurrency(results[results.length - 1].newEMI)}
                 valueColor="text-blue-400"
-                data-testid="final-emi"
+                dataTestId="final-emi"
               />
               <ResultCard
                 title="Loan Tenure Reduction"
@@ -452,7 +452,7 @@ function App() {
                   loanDetails.tenureYears * 12 -
                     results[results.length - 1].newTenureMonths
                 )} months`}
-                data-testid="tenure-reduction"
+                dataTestId="tenure-reduction"
               />
             </div>
 
@@ -461,25 +461,46 @@ function App() {
                 Prepayment Impact Details
               </h3>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-700">
+                <table
+                  className="min-w-full divide-y divide-gray-700"
+                  role="table"
+                >
                   <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <tr role="row">
+                      <th
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                        role="columnheader"
+                      >
                         Prepayment
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                        role="columnheader"
+                      >
                         Date
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                        role="columnheader"
+                      >
                         Amount
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                        role="columnheader"
+                      >
                         Savings
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                        role="columnheader"
+                      >
                         New EMI
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th
+                        className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                        role="columnheader"
+                      >
                         New Tenure
                       </th>
                     </tr>
@@ -489,23 +510,42 @@ function App() {
                       <tr
                         key={result.prepaymentId}
                         className="hover:bg-gray-700/50"
+                        role="row"
                       >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                        <td
+                          className="px-4 py-3 whitespace-nowrap text-sm text-white"
+                          role="cell"
+                        >
                           {formatCurrency(result.amount)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                        <td
+                          className="px-4 py-3 whitespace-nowrap text-sm text-white"
+                          role="cell"
+                        >
                           {new Date(result.date).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                        <td
+                          className="px-4 py-3 whitespace-nowrap text-sm text-white"
+                          role="cell"
+                        >
                           {formatCurrency(result.amount)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-green-400">
+                        <td
+                          className="px-4 py-3 whitespace-nowrap text-sm text-green-400"
+                          role="cell"
+                        >
                           {formatCurrency(result.savings)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-400">
+                        <td
+                          className="px-4 py-3 whitespace-nowrap text-sm text-blue-400"
+                          role="cell"
+                        >
                           {formatCurrency(result.newEMI)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                        <td
+                          className="px-4 py-3 whitespace-nowrap text-sm text-white"
+                          role="cell"
+                        >
                           {result.newTenureMonths} months
                         </td>
                       </tr>
